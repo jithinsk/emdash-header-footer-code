@@ -53,6 +53,14 @@ async function requireSnippet(ctx: Ctx, id: string): Promise<Snippet> {
 	return snippet;
 }
 
+/**
+ * 400 with field errors. EmDash 1.0.1's HTTP dispatch forwards only `code` and `message`
+ * (it drops `details`), so the message itself must be the readable error text.
+ */
+function validationError(errors: Record<string, string>): PluginRouteError {
+	return PluginRouteError.badRequest(Object.values(errors).join("; "), { errors });
+}
+
 function assertWritable(snippet: Snippet) {
 	if (snippet.schemaVersion > SCHEMA_VERSION) {
 		throw new PluginRouteError(
@@ -104,7 +112,7 @@ export function createRoutes(deps: RouteDeps) {
 				const input = body(ctx);
 				const id = typeof input.id === "string" && input.id !== "" ? input.id : undefined;
 				const result = validateSnippetInput(input);
-				if (!result.ok) throw PluginRouteError.badRequest("Validation failed", { errors: result.errors });
+				if (!result.ok) throw validationError(result.errors);
 
 				const all = await loadAllSnippets(cols(ctx).snippets);
 				const existing = id ? all.find((s) => s.id === id) : undefined;
@@ -112,7 +120,7 @@ export function createRoutes(deps: RouteDeps) {
 				if (existing) assertWritable(existing);
 
 				const limitErrors = checkLimits({ id, code: result.value.code }, all);
-				if (limitErrors) throw PluginRouteError.badRequest("Validation failed", { errors: limitErrors });
+				if (limitErrors) throw validationError(limitErrors);
 
 				const now = deps.now();
 				const user = userRef(ctx.user);
@@ -156,7 +164,7 @@ export function createRoutes(deps: RouteDeps) {
 				const source = await requireSnippet(ctx, requireId(ctx));
 				const all = await loadAllSnippets(cols(ctx).snippets);
 				const limitErrors = checkLimits({ code: source.code }, all);
-				if (limitErrors) throw PluginRouteError.badRequest("Validation failed", { errors: limitErrors });
+				if (limitErrors) throw validationError(limitErrors);
 				const now = deps.now();
 				const user = userRef(ctx.user);
 				const snippet: Snippet = {

@@ -2,7 +2,7 @@ import { Switch } from "@cloudflare/kumo";
 import * as React from "react";
 import { FIELDS, type FieldDef, getFieldValue, setFieldValue } from "../core/fields.js";
 import type { EditableSnippet } from "../core/types.js";
-import { validateSnippetInput } from "../core/validate.js";
+import { checkLimits, validateSnippetInput } from "../core/validate.js";
 import { ApiError, api } from "./api.js";
 
 type Draft = EditableSnippet & { id?: string };
@@ -74,12 +74,20 @@ export function SnippetForm({ initial, onDone }: { initial: Draft; onDone: (save
 			setErrors(local.errors);
 			return;
 		}
+		// The per-snippet size limit needs no server data, so report it under the Code field here.
+		const sizeErrors = checkLimits({ code: local.value.code }, []);
+		if (sizeErrors) {
+			setErrors(sizeErrors);
+			return;
+		}
 		setSaving(true);
 		try {
 			await api.save({ ...local.value, meta: draft.meta, id: draft.id });
 			onDone(true);
 		} catch (e) {
-			setErrors(e instanceof ApiError ? { _form: e.message, ...e.fieldErrors } : { _form: String(e) });
+			// EmDash 1.0.1 drops error details over HTTP; fall back to the (readable) message.
+			const fieldErrors = e instanceof ApiError ? e.fieldErrors : {};
+			setErrors(Object.keys(fieldErrors).length > 0 ? fieldErrors : { _form: e instanceof Error ? e.message : String(e) });
 		} finally {
 			setSaving(false);
 		}
@@ -88,7 +96,7 @@ export function SnippetForm({ initial, onDone }: { initial: Draft; onDone: (save
 	return (
 		<div className="space-y-4">
 			<h2 className="text-lg font-semibold">{draft.id ? "Edit snippet" : "New snippet"}</h2>
-			{errors._form && errors._form !== "Validation failed" && (
+			{errors._form && (
 				<p data-testid="hfc-error-_form" className="text-kumo-danger text-sm">{errors._form}</p>
 			)}
 			{FIELDS.map((field) => (

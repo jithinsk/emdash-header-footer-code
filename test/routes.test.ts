@@ -93,6 +93,8 @@ describe("snippets/save", () => {
 		const t = setup();
 		await expect(t.call("snippets/save", { name: "", code: "" })).rejects.toMatchObject({
 			status: 400,
+			// EmDash 1.0.1's HTTP dispatch forwards only code + message, so the message must be readable.
+			message: "Name is required; Code is required",
 			details: { errors: { name: "Name is required", code: "Code is required" } },
 		});
 		expect(t.snippets.rows.size).toBe(0);
@@ -101,6 +103,7 @@ describe("snippets/save", () => {
 	it("rejects oversized code", async () => {
 		const t = setup();
 		await expect(t.call("snippets/save", { ...valid, code: "x".repeat(65_537) })).rejects.toMatchObject({
+			message: "Code is 64.0 KB; the limit is 64 KB per snippet",
 			details: { errors: { code: "Code is 64.0 KB; the limit is 64 KB per snippet" } },
 		});
 	});
