@@ -1,0 +1,7 @@
+node_modules
+dist
+e2e/fixture/data.db*
+e2e/fixture/uploads
+e2e/fixture/.astro
+test-results
+playwright-report

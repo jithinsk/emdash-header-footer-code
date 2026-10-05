@@ -1,0 +1,39 @@
+{
+  "name": "emdash-header-footer-code",
+  "version": "0.1.0",
+  "description": "Add custom code snippets (analytics, verification tags, chat widgets, CSS/JS) to the head or body of EmDash pages — no theme edits.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": ["emdash", "emdash-plugin", "cms", "header", "footer", "snippets", "analytics"],
+  "exports": {
+    ".": { "types": "./dist/index.d.mts", "default": "./dist/index.mjs" },
+    "./plugin": { "types": "./dist/plugin.d.mts", "default": "./dist/plugin.mjs" },
+    "./admin": "./src/admin/index.tsx"
+  },
+  "files": ["dist", "src/admin", "src/core", "README.md", "LICENSE"],
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "e2e": "pnpm build && playwright test -c e2e/playwright.config.ts"
+  },
+  "peerDependencies": {
+    "emdash": "^1.0.1",
+    "react": "^18.0.0 || ^19.0.0",
+    "@cloudflare/kumo": "^2.6.0"
+  },
+  "devDependencies": {
+    "@cloudflare/kumo": "2.6.0",
+    "@playwright/test": "^1.56.0",
+    "@types/react": "19.2.14",
+    "better-sqlite3": "^12.4.1",
+    "@types/better-sqlite3": "^7.6.13",
+    "emdash": "1.0.1",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "tsdown": "0.20.3",
+    "typescript": "^6.0.3",
+    "vitest": "4.1.10"
+  },
+  "packageManager": "pnpm@10.33.0"
+}

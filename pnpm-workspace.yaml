@@ -1,0 +1,3 @@
+packages:
+  - "e2e/fixture"
+  - "e2e/test-transform"
