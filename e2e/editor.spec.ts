@@ -17,6 +17,9 @@ test("an Editor sees the list read-only, without code, and cannot write", async 
 	await expect(page.getByText("Secret", { exact: true })).toBeVisible();
 	await expect(page.getByTestId("hfc-new")).toHaveCount(0);
 	await expect(page.locator('[data-testid^="hfc-row-edit-"]')).toHaveCount(0);
+	await expect(page.locator('[data-testid^="hfc-row-toggle-"]')).toHaveCount(0);
+	await expect(page.locator('[data-testid^="hfc-row-duplicate-"]')).toHaveCount(0);
+	await expect(page.locator('[data-testid^="hfc-row-delete-"]')).toHaveCount(0);
 	await expect(page.getByTestId("hfc-killswitch")).toHaveCount(0);
 	await expect(page.locator("body")).not.toContainText("hfc-secret-code");
 
