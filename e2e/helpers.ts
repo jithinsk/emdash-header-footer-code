@@ -19,6 +19,24 @@ export function setDevUserRole(role: 40 | 50) {
 	db.close();
 }
 
+const PLACEMENT_LABEL = { head: "Head", "body:start": "Body start", "body:end": "Body end" } as const;
+
+/** Choose an option in a Kumo Select whose wrapper carries `testId`. */
+export async function pickOption(page: Page, testId: string, label: string) {
+	await page.getByTestId(testId).getByRole("combobox").click();
+	await page.getByRole("option", { name: label, exact: true }).click();
+	await expect(page.getByTestId(testId).getByRole("combobox")).toContainText(label);
+}
+
+/** Add values to a chip input: type each one and press Enter. */
+export async function addChips(page: Page, testId: string, values: string[]) {
+	const input = page.getByTestId(testId);
+	for (const v of values) {
+		await input.fill(v);
+		await input.press("Enter");
+	}
+}
+
 export async function createSnippet(
 	page: Page,
 	s: { name: string; code: string; placement?: "head" | "body:start" | "body:end"; priority?: number; include?: string[] },
@@ -26,9 +44,9 @@ export async function createSnippet(
 	await page.getByTestId("hfc-new").click();
 	await page.getByTestId("hfc-field-name").fill(s.name);
 	await page.getByTestId("hfc-field-code").fill(s.code);
-	if (s.placement) await page.getByTestId("hfc-field-placement").selectOption(s.placement);
+	if (s.placement) await pickOption(page, "hfc-field-placement", PLACEMENT_LABEL[s.placement]);
 	if (s.priority !== undefined) await page.getByTestId("hfc-field-priority").fill(String(s.priority));
-	if (s.include) await page.getByTestId("hfc-field-includePaths").fill(s.include.join("\n"));
+	if (s.include) await addChips(page, "hfc-field-includePaths", s.include);
 	await page.getByTestId("hfc-save").click();
 	await expect(page.getByText(s.name, { exact: true })).toBeVisible();
 }

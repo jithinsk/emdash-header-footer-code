@@ -18,6 +18,7 @@ test("an Editor sees the list read-only, without code, and cannot write", async 
 	await expect(page.getByTestId("hfc-new")).toHaveCount(0);
 	await expect(page.locator('[data-testid^="hfc-row-edit-"]')).toHaveCount(0);
 	await expect(page.locator('[data-testid^="hfc-row-toggle-"]')).toHaveCount(0);
+	await expect(page.locator('[data-testid^="hfc-row-menu-"]')).toHaveCount(0);
 	await expect(page.locator('[data-testid^="hfc-row-duplicate-"]')).toHaveCount(0);
 	await expect(page.locator('[data-testid^="hfc-row-delete-"]')).toHaveCount(0);
 	await expect(page.getByTestId("hfc-killswitch")).toHaveCount(0);
