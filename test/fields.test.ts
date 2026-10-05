@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FIELDS, emptyDraft, getFieldValue, setFieldValue } from "../src/core/fields.js";
+import { FIELDS, FIELD_SECTIONS, emptyDraft, getFieldValue, setFieldValue } from "../src/core/fields.js";
 
 describe("FIELDS", () => {
 	it("covers every editable field, in form order", () => {
@@ -14,6 +14,21 @@ describe("FIELDS", () => {
 			"pageKind",
 			"locales",
 		]);
+	});
+	it("puts every field in a form section", () => {
+		const sections = Object.fromEntries(FIELDS.map((f) => [f.name, f.section]));
+		expect(sections).toEqual({
+			name: "settings",
+			code: "main",
+			placement: "settings",
+			enabled: "settings",
+			priority: "settings",
+			includePaths: "targeting",
+			excludePaths: "targeting",
+			pageKind: "targeting",
+			locales: "targeting",
+		});
+		for (const f of FIELDS) expect(FIELD_SECTIONS).toContain(f.section);
 	});
 	it("marks code as manage-only and required", () => {
 		const code = FIELDS.find((f) => f.name === "code")!;
