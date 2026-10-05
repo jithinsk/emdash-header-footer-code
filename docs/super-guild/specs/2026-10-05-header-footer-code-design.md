@@ -219,7 +219,15 @@ Every write route bumps `rev` via `getVersioned` + `compareAndSet`, retrying a f
    import { createPlugin as base } from "emdash-header-footer-code/plugin";
    export const createPlugin = (opts) => base({ ...opts, transforms: [consentTransform] });
    ```
-   The descriptor factory accepts an `entrypoint` override, defaulting to `"emdash-header-footer-code/plugin"`, so a site registers `headerFooterCode({ entrypoint: "@cookieyes/emdash-consent/hfc-plugin" })`. The planner must verify the loader accepts this pattern in the e2e fixture. If it does not, fall back to a documented re-export pattern.
+   The descriptor factory accepts an `entrypoint` override, defaulting to `"emdash-header-footer-code/plugin"`, so a site registers `headerFooterCode({ entrypoint: "@cookieyes/emdash-consent/hfc-plugin" })`. The override is a descriptor field, not a plugin option: it is stripped from `options`.
+
+   **Confirmed against EmDash source** (`packages/core/src/astro/integration/virtual-modules.ts`, `generatePluginsModule` / `generateAdminRegistryModule`):
+   - Native plugins are loaded by the generated line `import { createPlugin } from "<descriptor.entrypoint>"`, called as `createPlugin(<JSON.stringify(descriptor.options)>)`. `JSON.stringify` silently drops functions, so transforms passed through descriptor `options` would vanish. That is why this pattern is needed.
+   - `entrypoint` can be any module specifier Vite can resolve. Nothing checks it against the plugin id or package name. The only check is that it is non-empty.
+   - The admin registry is keyed by `descriptor.id` and imports `descriptor.adminEntry`. Those keep their default values, so the admin UI is unaffected by the override.
+   - Use a package specifier (for example a workspace package) for the wrapper module, not a relative path, because the import is resolved from a virtual module.
+
+   The e2e fixture registers a test transform this way, which proves it at runtime (§10).
 4. **Field-driven admin form.** `core/fields.ts` exports `FIELDS: FieldDef[]`:
    ```ts
    interface FieldDef {
