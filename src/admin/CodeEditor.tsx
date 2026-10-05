@@ -53,6 +53,8 @@ export function CodeEditor({
 	}, [value, syncScroll]);
 
 	function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+		// Modifier-only presses (e.g. Shift before Shift+Tab) must not cancel a pending Esc.
+		if (e.key === "Shift" || e.key === "Control" || e.key === "Alt" || e.key === "Meta") return;
 		if (e.key === "Escape") {
 			tabEscape.current = true;
 			return;

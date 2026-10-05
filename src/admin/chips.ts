@@ -18,15 +18,18 @@ export function validateChip(value: string, kind: ChipKind): string | null {
 export interface AddChipsResult {
 	/** The new chip list (unchanged when nothing valid was entered). */
 	chips: string[];
-	/** Text to leave in the input: the invalid parts, or "" when everything was added. */
+	/**
+	 * Text to leave in the input: the first invalid value only (so it never contains a separator
+	 * that would re-trigger a commit), or "" when everything was added.
+	 */
 	rest: string;
-	/** Reason the first invalid part was rejected, or null. */
+	/** Reason the first invalid part was rejected (naming any other rejected parts), or null. */
 	error: string | null;
 }
 
 /**
  * Add the comma/newline-separated values in `raw` to `chips`. Valid values are trimmed and
- * added once (no duplicates); invalid ones stay in the input with the first error.
+ * added once (no duplicates); the first invalid one stays in the input with its error.
  */
 export function addChips(chips: readonly string[], raw: string, kind: ChipKind): AddChipsResult {
 	const next = [...chips];
@@ -43,5 +46,6 @@ export function addChips(chips: readonly string[], raw: string, kind: ChipKind):
 		}
 		if (!next.includes(value)) next.push(value);
 	}
-	return { chips: next, rest: rejected.join(", "), error };
+	if (error && rejected.length > 1) error = `${error} (also rejected: ${rejected.slice(1).join(", ")})`;
+	return { chips: next, rest: rejected[0] ?? "", error };
 }

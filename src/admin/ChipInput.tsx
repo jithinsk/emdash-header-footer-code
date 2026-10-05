@@ -14,6 +14,7 @@ export function ChipInput({
 	value,
 	onChange,
 	onErrorChange,
+	onPendingChange,
 	invalid,
 	describedBy,
 	label,
@@ -24,6 +25,8 @@ export function ChipInput({
 	value: string[];
 	onChange: (value: string[]) => void;
 	onErrorChange: (error: string | null) => void;
+	/** Reports whether the input holds text not yet added as a chip (counts as unsaved). */
+	onPendingChange?: (pending: boolean) => void;
 	invalid?: boolean;
 	describedBy?: string;
 	label: string;
@@ -33,6 +36,15 @@ export function ChipInput({
 	const [text, setText] = React.useState("");
 	// After a rejected add, re-validate as the user edits so the message clears once fixed.
 	const [liveCheck, setLiveCheck] = React.useState(false);
+	// IME composition: Enter/comma confirm the composed text, they must not add a chip.
+	const composing = React.useRef(false);
+
+	const pending = text.trim() !== "";
+	const onPendingRef = React.useRef(onPendingChange);
+	onPendingRef.current = onPendingChange;
+	React.useEffect(() => {
+		onPendingRef.current?.(pending);
+	}, [pending]);
 
 	function commit(raw: string) {
 		const r = addChips(value, raw, kind);
@@ -43,7 +55,7 @@ export function ChipInput({
 	}
 
 	function onTextChange(next: string) {
-		if (/[,\n]/.test(next)) {
+		if (!composing.current && /[,\n]/.test(next)) {
 			commit(next);
 			return;
 		}
@@ -62,6 +74,7 @@ export function ChipInput({
 	}
 
 	function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+		if (e.nativeEvent.isComposing || composing.current) return;
 		if (e.key === "Enter") {
 			e.preventDefault();
 			commit(text);
@@ -111,6 +124,24 @@ export function ChipInput({
 				placeholder={value.length === 0 ? placeholder : undefined}
 				onChange={(e) => onTextChange(e.target.value)}
 				onKeyDown={onKeyDown}
+				onCompositionStart={() => {
+					composing.current = true;
+				}}
+				onCompositionEnd={(e) => {
+					composing.current = false;
+					onTextChange(e.currentTarget.value);
+				}}
+				onPaste={(e) => {
+					// A single-line <input> would strip pasted newlines ("/a\n/b" -> "/a/b"), so split
+					// multi-value pastes here and add each value.
+					const pasted = e.clipboardData.getData("text");
+					if (!/[,\r\n]/.test(pasted)) return;
+					e.preventDefault();
+					const el = e.currentTarget;
+					const start = el.selectionStart ?? text.length;
+					const end = el.selectionEnd ?? text.length;
+					commit(`${text.slice(0, start)}${pasted.replace(/\r/g, "")}${text.slice(end)}`);
+				}}
 				onBlur={() => {
 					if (text.trim() !== "") commit(text);
 				}}

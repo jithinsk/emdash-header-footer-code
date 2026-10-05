@@ -31,11 +31,22 @@ describe("addChips", () => {
 			error: "Path must start with /",
 		});
 	});
+	it("keeps only the first rejected value in the input, naming the others in the error", () => {
+		const r = addChips([], "a, b", "path");
+		expect(r.rest).toBe("a");
+		expect(r.rest).not.toMatch(/[,\n]/);
+		expect(r.error).toBe("Path must start with / (also rejected: b)");
+	});
 	it("splits on commas and newlines, adding the valid parts and keeping the invalid ones", () => {
 		expect(addChips([], "/a, nope,/b\n/c", "path")).toEqual({
 			chips: ["/a", "/b", "/c"],
 			rest: "nope",
 			error: "Path must start with /",
+		});
+		expect(addChips([], "nope,/ok,also bad", "path")).toEqual({
+			chips: ["/ok"],
+			rest: "nope",
+			error: "Path must start with / (also rejected: also bad)",
 		});
 		expect(addChips(["en"], "fr,en,de", "locale")).toEqual({ chips: ["en", "fr", "de"], rest: "", error: null });
 	});

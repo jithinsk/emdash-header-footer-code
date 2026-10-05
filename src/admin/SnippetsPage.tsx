@@ -25,6 +25,9 @@ type Notify = (title: string, variant?: "success" | "error") => void;
 
 /** True when an ancestor (the EmDash admin shell) already provides Kumo's toast manager. */
 function useHasToastProvider(): boolean {
+	// Deliberate try/catch around a hook: Kumo's useKumoToastManager reads its context and throws
+	// when there is no provider. The hook is called on every render either way, so hook order is
+	// stable; we only use the throw as a "no provider here" signal.
 	try {
 		useKumoToastManager();
 		return true;
@@ -61,6 +64,7 @@ function SnippetsScreen() {
 	const [error, setError] = React.useState<string | null>(null);
 	const [confirmKill, setConfirmKill] = React.useState(false);
 	const [killPending, setKillPending] = React.useState(false);
+	const [killError, setKillError] = React.useState<string | null>(null);
 
 	const refresh = React.useCallback(() => {
 		return api.list().then(setData, (e: unknown) => setError(e instanceof Error ? e.message : String(e)));
@@ -94,14 +98,28 @@ function SnippetsScreen() {
 		}
 	}
 
+	/** Turning output off happens from the confirm Dialog, so its failure is shown there. */
 	async function setOutput(enabled: boolean) {
 		setKillPending(true);
-		const ok = await run(
-			() => api.setKillSwitch(!enabled),
-			enabled ? "Snippet output turned on" : "All snippet output turned off",
-		);
-		setKillPending(false);
-		if (ok) setConfirmKill(false);
+		setKillError(null);
+		setError(null);
+		try {
+			await api.setKillSwitch(!enabled);
+			notify(enabled ? "Snippet output turned on" : "All snippet output turned off");
+			setConfirmKill(false);
+		} catch (e) {
+			const message = e instanceof Error ? e.message : String(e);
+			if (enabled) setError(message);
+			else setKillError(message);
+		} finally {
+			setKillPending(false);
+			await refresh();
+		}
+	}
+
+	function closeKillDialog() {
+		setConfirmKill(false);
+		setKillError(null);
 	}
 
 	if (view.kind === "edit") {
@@ -222,14 +240,23 @@ function SnippetsScreen() {
 				<LayerCard>{list}</LayerCard>
 			)}
 
-			<Dialog.Root role="alertdialog" open={confirmKill} onOpenChange={(o) => !o && !killPending && setConfirmKill(false)}>
+			<Dialog.Root role="alertdialog" open={confirmKill} onOpenChange={(o) => !o && !killPending && closeKillDialog()}>
 				<Dialog className="max-w-md p-6" size="sm">
 					<Dialog.Title className="text-lg font-semibold">Turn off all snippet output?</Dialog.Title>
 					<Dialog.Description className="text-kumo-subtle">
 						Every snippet stops rendering on every page, whether it is enabled or not, until you turn output back on.
 					</Dialog.Description>
+					{killError && (
+						<Banner
+							variant="error"
+							className="mt-4"
+							data-testid="hfc-killswitch-error"
+							title="Output was not turned off"
+							description={killError}
+						/>
+					)}
 					<div className="mt-6 flex justify-end gap-2">
-						<Button variant="secondary" disabled={killPending} onClick={() => setConfirmKill(false)}>
+						<Button variant="secondary" disabled={killPending} onClick={closeKillDialog}>
 							Cancel
 						</Button>
 						<Button

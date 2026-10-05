@@ -10,6 +10,9 @@ import { ArrowLeftIcon } from "./icons.js";
 
 export type Draft = EditableSnippet & { id?: string };
 
+/** Keyboard help shown in the Code card header; the code textarea references it. */
+const CODE_KEYS_ID = "hfc-code-keys";
+
 const SECTION_TITLE: Record<Exclude<FieldSection, "main">, { title: string; description: string }> = {
 	settings: { title: "Settings", description: "What this snippet is and where in the page it goes." },
 	targeting: { title: "Targeting", description: "Which pages it renders on. Leave everything empty for every page." },
@@ -64,15 +67,20 @@ function FieldControl({
 	error,
 	onChange,
 	onChipError,
+	onChipPending,
 }: {
 	field: FieldDef;
 	value: unknown;
 	error?: string;
 	onChange: (v: unknown) => void;
 	onChipError: (e: string | null) => void;
+	onChipPending: (pending: boolean) => void;
 }) {
 	const id = fieldId(field.name);
-	const describedBy = [field.help && `${id}-help`, error && `${id}-error`].filter(Boolean).join(" ") || undefined;
+	const describedBy =
+		[field.type === "code" && CODE_KEYS_ID, field.help && `${id}-help`, error && `${id}-error`]
+			.filter(Boolean)
+			.join(" ") || undefined;
 	const invalid = Boolean(error);
 	switch (field.type) {
 		case "text":
@@ -144,6 +152,7 @@ function FieldControl({
 						value={Array.isArray(value) ? (value as string[]) : []}
 						onChange={onChange}
 						onErrorChange={onChipError}
+						onPendingChange={onChipPending}
 						invalid={invalid}
 						describedBy={describedBy}
 					/>
@@ -165,12 +174,26 @@ function FieldControl({
 	}
 }
 
-function CardHeader({ title, description, aside }: { title: string; description?: string; aside?: React.ReactNode }) {
+function CardHeader({
+	title,
+	description,
+	descriptionId,
+	aside,
+}: {
+	title: string;
+	description?: string;
+	descriptionId?: string;
+	aside?: React.ReactNode;
+}) {
 	return (
 		<div className="flex items-start justify-between gap-4 border-b border-kumo-line px-5 py-4">
 			<div className="min-w-0">
 				<h2 className="text-base font-semibold text-kumo-default">{title}</h2>
-				{description && <p className="text-sm text-kumo-subtle">{description}</p>}
+				{description && (
+					<p id={descriptionId} className="text-sm text-kumo-subtle">
+						{description}
+					</p>
+				)}
 			</div>
 			{aside}
 		</div>
@@ -192,8 +215,10 @@ export function SnippetForm({
 	const [chipErrors, setChipErrors] = React.useState<Record<string, string>>({});
 	const [saving, setSaving] = React.useState(false);
 	const [confirmDiscard, setConfirmDiscard] = React.useState(false);
+	// Chip inputs holding text that has not been added yet (valid or not) count as unsaved edits.
+	const [pendingChips, setPendingChips] = React.useState<Record<string, true>>({});
 
-	const dirty = !sameDraft(draft, initial);
+	const dirty = !sameDraft(draft, initial) || Object.keys(pendingChips).length > 0;
 	const codeBytes = byteLength(draft.code);
 	const overLimit = codeBytes > LIMITS.maxSnippetBytes;
 
@@ -213,20 +238,29 @@ export function SnippetForm({
 		// Commit any half-typed chip (ChipInput adds pending text on blur) before reading the draft.
 		const active = document.activeElement;
 		if (active instanceof HTMLElement) active.blur();
+		// When the save does not go through, put focus back where the user was (e.g. after Ctrl+S).
+		const restoreFocus = () => {
+			if (active instanceof HTMLElement && active !== document.body && active.isConnected) active.focus();
+		};
 		await Promise.resolve();
 		const current = draftRef.current;
 		const local = validateSnippetInput(current);
 		if (!local.ok) {
 			setErrors(local.errors);
+			restoreFocus();
 			return;
 		}
 		// The per-snippet size limit needs no server data, so report it under the Code field here.
 		const sizeErrors = checkLimits({ code: local.value.code }, []);
 		if (sizeErrors) {
 			setErrors(sizeErrors);
+			restoreFocus();
 			return;
 		}
-		if (Object.keys(chipErrorsRef.current).length > 0) return;
+		if (Object.keys(chipErrorsRef.current).length > 0) {
+			restoreFocus();
+			return;
+		}
 		setSaving(true);
 		try {
 			const { snippet } = await api.save({ ...local.value, meta: current.meta, id: current.id });
@@ -238,6 +272,7 @@ export function SnippetForm({
 				Object.keys(fieldErrors).length > 0 ? fieldErrors : { _form: e instanceof Error ? e.message : String(e) },
 			);
 			setSaving(false);
+			restoreFocus();
 		}
 	}
 
@@ -267,6 +302,7 @@ export function SnippetForm({
 	}, [dirty]);
 
 	function requestClose() {
+		if (saving) return;
 		if (dirty) setConfirmDiscard(true);
 		else onClose();
 	}
@@ -279,6 +315,14 @@ export function SnippetForm({
 				value={getFieldValue(draft as unknown as Record<string, unknown>, field.name)}
 				error={chipErrors[field.name] ?? errors[field.name]}
 				onChange={(v) => update(field.name, v)}
+				onChipPending={(pending) =>
+					setPendingChips((p) => {
+						if (pending === Boolean(p[field.name])) return p;
+						if (pending) return { ...p, [field.name]: true };
+						const { [field.name]: _, ...rest } = p;
+						return rest;
+					})
+				}
 				onChipError={(err) =>
 					setChipErrors((c) => {
 						if (err) return { ...c, [field.name]: err };
@@ -305,6 +349,7 @@ export function SnippetForm({
 					size="sm"
 					icon={<ArrowLeftIcon />}
 					data-testid="hfc-back"
+					disabled={saving}
 					onClick={requestClose}
 				>
 					Back to snippets
@@ -333,6 +378,7 @@ export function SnippetForm({
 					<CardHeader
 						title="Code"
 						description="Tab indents, Shift+Tab outdents. Press Esc then Tab to move on."
+						descriptionId={CODE_KEYS_ID}
 						aside={
 							<span
 								data-testid="hfc-code-size"
@@ -366,7 +412,7 @@ export function SnippetForm({
 					<span className="hidden sm:inline"> · Ctrl/⌘ + S to save</span>
 				</p>
 				<div className="flex gap-2">
-					<Button variant="secondary" data-testid="hfc-cancel" onClick={requestClose}>
+					<Button variant="secondary" data-testid="hfc-cancel" disabled={saving} onClick={requestClose}>
 						Cancel
 					</Button>
 					<Button variant="primary" data-testid="hfc-save" loading={saving} onClick={() => void save()}>

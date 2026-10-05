@@ -18,7 +18,11 @@ const CSS = `
 	border-top: 1px solid var(--color-kumo-line);
 	background: var(--color-kumo-base);
 }
+/* Keep Kumo's toast viewport (fixed bottom-right) clear of the sticky Save footer while the
+   editor is open. Kumo gives the viewport no hook of its own, so match its utility classes. */
+body:has(.hfc-footer) .fixed.top-auto.bottom-4 { bottom: 5.5rem !important; }
 .hfc-where { max-width: 36rem; }
+@media (max-width: 1023px) { .hfc-where { max-width: 14rem; } }
 .hfc-row-clickable { cursor: pointer; }
 .hfc-row-clickable:hover > td { background: color-mix(in oklab, var(--color-kumo-tint) 45%, transparent); }
 .hfc-row-off > td.hfc-dim { opacity: 0.55; }

@@ -139,6 +139,20 @@ test("an invalid path chip shows the reason and is not added", async ({ page }) 
 	await expect(chips).toHaveCount(0);
 });
 
+test("pasting several lines into a chip input adds one chip per line", async ({ page }) => {
+	await page.getByTestId("hfc-new").click();
+	const input = page.getByTestId("hfc-field-includePaths");
+	await input.focus();
+	// A real paste of "/a<newline>/b": a plain <input> would otherwise strip the newline into "/a/b".
+	await input.evaluate((el, text) => {
+		const data = new DataTransfer();
+		data.setData("text/plain", text);
+		el.dispatchEvent(new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }));
+	}, "/a\r\n/b\n");
+	await expect(page.getByTestId("hfc-field-includePaths-chip")).toHaveText(["/a", "/b"]);
+	await expect(input).toHaveValue("");
+});
+
 test("leaving the editor with unsaved changes asks first", async ({ page }) => {
 	// No edits: Back returns straight to the list.
 	await page.getByTestId("hfc-new").click();
@@ -156,6 +170,12 @@ test("leaving the editor with unsaved changes asks first", async ({ page }) => {
 	await page.getByTestId("hfc-discard-confirm").click();
 	await expect(page.getByTestId("hfc-new")).toBeVisible();
 	await expect(page.getByText("Draft only", { exact: true })).toHaveCount(0);
+
+	// Text left in a chip input (here invalid, so leaving the field cannot add it) counts as unsaved.
+	await page.getByTestId("hfc-new").click();
+	await page.getByTestId("hfc-field-locales").fill("en us");
+	await page.getByTestId("hfc-back").click();
+	await expect(page.getByTestId("hfc-discard-confirm")).toBeVisible();
 });
 
 test("the code editor shows its size and indents with Tab", async ({ page }) => {
@@ -176,4 +196,10 @@ test("the code editor shows its size and indents with Tab", async ({ page }) => 
 	await code.press("Shift+Tab");
 	await expect(code).toHaveValue("<div>");
 	await expect(code).toBeFocused();
+
+	// Esc, then Shift+Tab (the Shift keydown must not cancel the Esc), moves focus out unchanged.
+	await code.press("Escape");
+	await code.press("Shift+Tab");
+	await expect(code).not.toBeFocused();
+	await expect(code).toHaveValue("<div>");
 });

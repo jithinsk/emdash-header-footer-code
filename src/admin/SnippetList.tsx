@@ -138,10 +138,12 @@ export function SnippetList(props: {
 						<Table.Header>
 							<Table.Row>
 								<Table.Head>Name</Table.Head>
-								<Table.Head>Placement</Table.Head>
-								<Table.Head>Priority</Table.Head>
+								{/* Below lg (e.g. ~820px next to the sidebar) Placement, Priority and Updated give way so
+								    Enabled and the actions fit; the where-summary line still starts with the placement. */}
+								<Table.Head className="hidden lg:table-cell">Placement</Table.Head>
+								<Table.Head className="hidden lg:table-cell">Priority</Table.Head>
 								<Table.Head>Enabled</Table.Head>
-								<Table.Head>Updated</Table.Head>
+								<Table.Head className="hidden lg:table-cell">Updated</Table.Head>
 								{canManage && (
 									<Table.Head>
 										<span className="sr-only">Actions</span>
@@ -172,11 +174,11 @@ export function SnippetList(props: {
 											{whereSummary(s)}
 										</div>
 									</Table.Cell>
-									<Table.Cell className="hfc-dim">
+									<Table.Cell className="hfc-dim hidden lg:table-cell">
 										<Badge variant="secondary">{PLACEMENT_LABEL[s.placement]}</Badge>
 									</Table.Cell>
-									<Table.Cell className="hfc-dim tabular-nums">{s.priority}</Table.Cell>
-									<Table.Cell>
+									<Table.Cell className="hfc-dim hidden tabular-nums lg:table-cell">{s.priority}</Table.Cell>
+									<Table.Cell className="whitespace-nowrap">
 										{canManage ? (
 											<Switch
 												size="sm"
@@ -184,13 +186,13 @@ export function SnippetList(props: {
 												checked={s.enabled}
 												onCheckedChange={(v: boolean) => props.onToggle(s.id, v)}
 												label={s.enabled ? "On" : "Off"}
-												aria-label={`${s.enabled ? "Disable" : "Enable"} ${s.name}`}
+												aria-label={`${s.enabled ? "On" : "Off"} — ${s.name}`}
 											/>
 										) : (
 											<Badge variant={s.enabled ? "success" : "secondary"}>{s.enabled ? "On" : "Off"}</Badge>
 										)}
 									</Table.Cell>
-									<Table.Cell className="hfc-dim whitespace-nowrap">
+									<Table.Cell className="hfc-dim hidden whitespace-nowrap lg:table-cell">
 										<div className="text-sm text-kumo-default" title={formatTimestamp(s.updatedAt)}>
 											{relativeTime(s.updatedAt, now)}
 										</div>
