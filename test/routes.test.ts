@@ -19,9 +19,16 @@ function setup() {
 		now: () => new Date(Date.UTC(2026, 9, 5, 0, 0, clock++)).toISOString(),
 		newId: () => `id-${++idSeq}`,
 	});
+	const log = makeLogger();
 	const call = (name: keyof typeof routes, input: unknown = {}, user: typeof ADMIN | undefined = ADMIN) =>
-		routes[name].handler({ input, user, kv, storage: { snippets, changelog }, log: makeLogger() } as never);
-	return { routes, call, kv, snippets, changelog, invalidations: () => invalidations };
+		routes[name].handler({ input, user, kv, storage: { snippets, changelog }, log } as never);
+	/** Make every subsequent change-log write throw. */
+	const breakChangelog = () => {
+		changelog.put = async () => {
+			throw new Error("changelog write failed");
+		};
+	};
+	return { routes, call, kv, snippets, changelog, log, breakChangelog, invalidations: () => invalidations };
 }
 
 const valid = { name: "GA", code: "<script>ga()</script>", placement: "head" };
@@ -145,7 +152,12 @@ describe("toggle / duplicate / delete / killswitch / changelog", () => {
 		const { snippet } = (await t.call("snippets/save", valid)) as { snippet: Snippet };
 		const r = (await t.call("snippets/toggle", { id: snippet.id, enabled: false })) as { snippet: Snippet };
 		expect(r.snippet.enabled).toBe(false);
+		expect(t.snippets.rows.get(snippet.id)!.enabled).toBe(false);
+		expect((await readState(t.kv)).rev).toBe(2);
+		expect(t.invalidations()).toBe(2);
 		await t.call("snippets/toggle", { id: snippet.id, enabled: true });
+		expect((await readState(t.kv)).rev).toBe(3);
+		expect(t.invalidations()).toBe(3);
 		expect([...t.changelog.rows.values()].map((e) => e.action)).toEqual(["create", "disable", "enable"]);
 		await expect(t.call("snippets/toggle", { id: snippet.id, enabled: "yes" })).rejects.toMatchObject({
 			status: 400,
@@ -159,6 +171,8 @@ describe("toggle / duplicate / delete / killswitch / changelog", () => {
 		expect(copy).toMatchObject({ name: "GA (copy)", enabled: false, code: valid.code, meta: { k: 1 } });
 		expect(copy.id).not.toBe(snippet.id);
 		expect([...t.changelog.rows.values()].at(-1)).toMatchObject({ action: "duplicate", snippetId: copy.id });
+		expect((await readState(t.kv)).rev).toBe(2);
+		expect(t.invalidations()).toBe(2);
 	});
 
 	it("delete removes the snippet and logs its name", async () => {
@@ -167,6 +181,8 @@ describe("toggle / duplicate / delete / killswitch / changelog", () => {
 		expect(await t.call("snippets/delete", { id: snippet.id })).toEqual({ deleted: true });
 		expect(t.snippets.rows.size).toBe(0);
 		expect([...t.changelog.rows.values()].at(-1)).toMatchObject({ action: "delete", snippetName: "GA" });
+		expect((await readState(t.kv)).rev).toBe(2);
+		expect(t.invalidations()).toBe(2);
 	});
 
 	it("killswitch/set flips disabled, bumps rev and logs", async () => {
@@ -183,5 +199,57 @@ describe("toggle / duplicate / delete / killswitch / changelog", () => {
 		await t.call("killswitch/set", { disabled: true });
 		const { entries } = (await t.call("changelog/list")) as { entries: ChangeLogEntry[] };
 		expect(entries.map((e) => e.action)).toEqual(["killswitch_on", "create"]);
+	});
+});
+
+describe("change-log write failure", () => {
+	async function seeded() {
+		const t = setup();
+		const { snippet } = (await t.call("snippets/save", valid)) as { snippet: Snippet };
+		t.breakChangelog();
+		return { t, snippet };
+	}
+
+	it("delete still bumps rev, invalidates the cache, succeeds and logs the error", async () => {
+		const { t, snippet } = await seeded();
+		expect(await t.call("snippets/delete", { id: snippet.id })).toEqual({ deleted: true });
+		expect(t.snippets.rows.size).toBe(0);
+		expect((await readState(t.kv)).rev).toBe(2);
+		expect(t.invalidations()).toBe(2);
+		expect(t.log.errors).toHaveLength(1);
+		expect(t.log.errors[0]![0]).toContain("change-log");
+		expect(t.log.errors[0]![1]).toMatchObject({ action: "delete", snippetId: snippet.id });
+	});
+
+	it("toggle still bumps rev, invalidates the cache and succeeds", async () => {
+		const { t, snippet } = await seeded();
+		const r = (await t.call("snippets/toggle", { id: snippet.id, enabled: false })) as { snippet: Snippet };
+		expect(r.snippet.enabled).toBe(false);
+		expect((await readState(t.kv)).rev).toBe(2);
+		expect(t.invalidations()).toBe(2);
+		expect(t.log.errors[0]![1]).toMatchObject({ action: "disable" });
+	});
+
+	it("save and killswitch still bump rev and invalidate the cache", async () => {
+		const { t, snippet } = await seeded();
+		await t.call("snippets/save", { ...valid, id: snippet.id, name: "GA4" });
+		expect(t.snippets.rows.get(snippet.id)!.name).toBe("GA4");
+		expect(await t.call("killswitch/set", { disabled: true })).toEqual({ disabled: true });
+		expect(await readState(t.kv)).toEqual({ rev: 3, disabled: true });
+		expect(t.invalidations()).toBe(3);
+		expect(t.log.errors).toHaveLength(2);
+	});
+
+	it("bumps rev before attempting the change-log write", async () => {
+		const t = setup();
+		const { snippet } = (await t.call("snippets/save", valid)) as { snippet: Snippet };
+		let revAtLogWrite: number | null = null;
+		const put = t.changelog.put.bind(t.changelog);
+		t.changelog.put = async (id, data) => {
+			revAtLogWrite = (await readState(t.kv)).rev;
+			return put(id, data);
+		};
+		await t.call("snippets/delete", { id: snippet.id });
+		expect(revAtLogWrite).toBe(2);
 	});
 });

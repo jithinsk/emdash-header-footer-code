@@ -5,7 +5,12 @@ import { LIMITS } from "./core/validate.js";
 export type SnippetCollection = StorageCollection<Snippet>;
 export type LogCollection = StorageCollection<ChangeLogEntry>;
 
-/** All snippets in one query. The 100-snippet cap keeps this to a single page. */
+/**
+ * All snippets in one query. The 100-snippet cap keeps this to a single page.
+ * The cap check (checkLimits) and the write are not atomic, so concurrent creates can push
+ * the stored count past 100; snippets beyond the first 100 (by createdAt) are then not
+ * loaded. Acceptable for v0.1.
+ */
 export async function loadAllSnippets(c: Pick<SnippetCollection, "query">): Promise<Snippet[]> {
 	const { items } = await c.query({ orderBy: { createdAt: "asc" }, limit: LIMITS.maxSnippets });
 	return items.map((i) => i.data);

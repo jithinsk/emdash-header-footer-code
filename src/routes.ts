@@ -72,21 +72,37 @@ function assertWritable(snippet: Snippet) {
 }
 
 export function createRoutes(deps: RouteDeps) {
-	/** Log, bump rev, invalidate. Runs after every successful write. */
+	/**
+	 * Bump rev, invalidate, then log. Runs after every successful record write.
+	 *
+	 * Rev moves first so a failed change-log write can never leave isolates serving stale
+	 * output (e.g. a deleted snippet still rendering). A failed log write is reported via
+	 * ctx.log.error and does not fail the request: the record write already happened, so a
+	 * 5xx would mislead the admin into retrying (a duplicate create, or a 404 on delete).
+	 * A lost audit row is the lesser harm.
+	 */
 	async function afterWrite(ctx: Ctx, action: ChangeLogAction, snippet: Pick<Snippet, "id" | "name"> | null, change?: { disabled?: boolean }) {
-		await appendLog(
-			cols(ctx).changelog,
-			{
-				at: deps.now(),
-				user: userRef(ctx.user),
-				action,
-				snippetId: snippet?.id ?? null,
-				snippetName: snippet?.name ?? null,
-			},
-			deps.newId,
-		);
 		const state = await bumpState(ctx.kv, change);
 		deps.cache.invalidate();
+		try {
+			await appendLog(
+				cols(ctx).changelog,
+				{
+					at: deps.now(),
+					user: userRef(ctx.user),
+					action,
+					snippetId: snippet?.id ?? null,
+					snippetName: snippet?.name ?? null,
+				},
+				deps.newId,
+			);
+		} catch (error) {
+			ctx.log.error("header-footer-code: could not write change-log entry", {
+				action,
+				snippetId: snippet?.id ?? null,
+				error: error instanceof Error ? error.message : String(error),
+			});
+		}
 		return state;
 	}
 
@@ -119,6 +135,8 @@ export function createRoutes(deps: RouteDeps) {
 				if (id && !existing) throw new PluginRouteError("NOT_FOUND", "Snippet not found", 404);
 				if (existing) assertWritable(existing);
 
+				// Not atomic: the cap check and the write below are separate operations, so concurrent
+				// creates can exceed 100 snippets (extras past 100 are not loaded). Acceptable for v0.1.
 				const limitErrors = checkLimits({ id, code: result.value.code }, all);
 				if (limitErrors) throw validationError(limitErrors);
 
@@ -163,6 +181,7 @@ export function createRoutes(deps: RouteDeps) {
 			handler: async (ctx: Ctx) => {
 				const source = await requireSnippet(ctx, requireId(ctx));
 				const all = await loadAllSnippets(cols(ctx).snippets);
+				// Same non-atomic cap check as snippets/save.
 				const limitErrors = checkLimits({ code: source.code }, all);
 				if (limitErrors) throw validationError(limitErrors);
 				const now = deps.now();
