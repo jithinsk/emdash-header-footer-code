@@ -23,6 +23,7 @@
     "@cloudflare/kumo": "^2.6.0"
   },
   "devDependencies": {
+    "@astrojs/react": "^6.0.5",
     "@cloudflare/kumo": "2.6.0",
     "@playwright/test": "^1.56.0",
     "@types/react": "19.2.14",
@@ -35,5 +36,6 @@
     "typescript": "^6.0.3",
     "vitest": "4.1.10"
   },
-  "packageManager": "pnpm@10.33.0"
+  "packageManager": "pnpm@10.33.0",
+  "pnpm": { "onlyBuiltDependencies": ["better-sqlite3", "esbuild"] }
 }

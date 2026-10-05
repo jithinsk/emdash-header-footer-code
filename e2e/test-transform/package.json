@@ -1,0 +1,8 @@
+{
+  "name": "hfc-test-transform",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { "./plugin": "./plugin.ts" },
+  "dependencies": { "emdash-header-footer-code": "link:../.." }
+}
