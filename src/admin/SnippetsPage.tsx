@@ -47,11 +47,12 @@ function useNotify(): Notify {
  */
 export function SnippetsPage() {
 	const hasProvider = useHasToastProvider();
+	// `hfc-root` scopes our styles and marks the plugin's own UI (e2e accessibility checks run here).
 	const page = (
-		<>
+		<div className="hfc-root" data-testid="hfc-root">
 			<HfcStyles />
 			<SnippetsScreen />
-		</>
+		</div>
 	);
 	return hasProvider ? page : <Toasty>{page}</Toasty>;
 }
@@ -189,6 +190,7 @@ function SnippetsScreen() {
 
 			<div className="space-y-3">
 				<Banner
+					className="hfc-banner-info"
 					data-testid="hfc-theme-note"
 					icon={<InfoIcon size={20} />}
 					title="Your theme must include the EmDash page components"

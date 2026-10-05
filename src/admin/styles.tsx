@@ -31,23 +31,45 @@ const CSS = `
 @container (min-width: 34rem) {
 	.hfc-targeting-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-/* Snippets / Change log: brand-tinted active segment (Kumo's default is a white pill on grey). */
+/*
+ * Snippets / Change log: brand-tinted active segment (Kumo's default is a white pill on grey).
+ * Contrast (WCAG): every label >= 4.5:1, and the active pill's solid blue ring >= 3:1 against both
+ * the track and its own tint (1.4.11), in light and dark. --text-color-kumo-link is blue-800 in
+ * light and blue-400 in dark, so it works as a ring/text colour on either surface.
+ */
 .hfc-tabs .hfc-tab-indicator {
 	background: color-mix(in oklab, var(--color-kumo-brand) 14%, var(--color-kumo-base));
-	box-shadow: 0 0 0 1px color-mix(in oklab, var(--color-kumo-brand) 35%, transparent);
+	box-shadow: 0 0 0 1.5px var(--text-color-kumo-link);
 }
 .hfc-tabs .hfc-tab { cursor: pointer; transition: background-color 120ms, color 120ms; }
 .hfc-tabs .hfc-tab[aria-selected="true"] { color: var(--text-color-kumo-link); font-weight: 500; }
-.hfc-tabs .hfc-tab[aria-selected="false"] { color: var(--text-color-kumo-subtle); }
+/* Inactive: Kumo's "subtle" is only ~4:1 on the light track, "strong" passes there; in dark
+   "strong" is brighter than the active label, so dark keeps "subtle" (~7.6:1). */
+.hfc-tabs .hfc-tab[aria-selected="false"] {
+	color: light-dark(var(--text-color-kumo-strong), var(--text-color-kumo-subtle));
+}
 .hfc-tabs .hfc-tab[aria-selected="false"]:hover {
 	color: var(--text-color-kumo-default);
 	background: color-mix(in oklab, var(--color-kumo-base) 60%, transparent);
 }
+/* Focus: a 2px inset ring in the same high-contrast blue (Kumo's brand ring is ~3:1 at best). */
+.hfc-tabs .hfc-tab:focus-visible { box-shadow: inset 0 0 0 2px var(--text-color-kumo-link); }
 .hfc-tabs .hfc-tab .hfc-tab-count { transition: background-color 120ms, color 120ms; }
 .hfc-tabs .hfc-tab[aria-selected="true"] .hfc-tab-count {
 	background: color-mix(in oklab, var(--color-kumo-brand) 22%, var(--color-kumo-base));
 	color: var(--text-color-kumo-link);
 }
+/*
+ * Info banner (theme note): Kumo's info Banner sets blue text on a blue tint. Keep the tint and a
+ * blue icon, add a blue left accent, and use neutral text so the copy reads at body contrast.
+ */
+.hfc-banner-info {
+	background: color-mix(in oklab, var(--color-kumo-info-tint) 55%, var(--color-kumo-base));
+	box-shadow: inset 3px 0 0 var(--text-color-kumo-link);
+	color: var(--text-color-kumo-default);
+}
+.hfc-banner-info code { color: var(--text-color-kumo-default); font-weight: 500; }
+.hfc-banner-info svg { color: var(--text-color-kumo-link); }
 .hfc-code-text { font-size: 13px; line-height: 20px; tab-size: 2; }
 .hfc-code-area { height: 24rem; min-height: 21.5rem; white-space: pre; overflow: auto; }
 .hfc-footer {

@@ -27,6 +27,7 @@
     "@cloudflare/kumo": "^2.6.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@astrojs/react": "^6.0.5",
     "@cloudflare/kumo": "2.6.0",
     "@playwright/test": "^1.56.0",
