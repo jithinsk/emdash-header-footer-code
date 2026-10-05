@@ -92,6 +92,17 @@ describe("renderFragments", () => {
 		expect(out).toEqual([extra]);
 	});
 
+	it("fragments from an earlier transform are kept when a later transform drops or throws", () => {
+		const extra = { kind: "html" as const, placement: "head" as const, html: "<link>", key: "loader" };
+		const adds: Transform = ({ html }) => ({ html, fragments: [extra] });
+		const drops: Transform = () => null;
+		const throws: Transform = () => {
+			throw new Error("boom");
+		};
+		expect(run([makeSnippet()], [adds, drops]).out).toEqual([extra]);
+		expect(run([makeSnippet()], [adds, throws]).out).toEqual([extra]);
+	});
+
 	it("keyless extra fragments are all kept", () => {
 		const f = { kind: "html" as const, placement: "head" as const, html: "<b></b>" };
 		const t: Transform = ({ html }) => ({ html, fragments: [f] });

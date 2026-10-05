@@ -85,6 +85,7 @@ Each snippet has these fields:
 - A pattern must start with `/`, contain no whitespace, and may use `*` only as its final character. There is no regex.
 - A pattern is either an exact path or a prefix ending in `*`.
 - A trailing `/` is ignored on both the pattern and the path (except for `/` itself). Matching is case-sensitive.
+- Matching uses decoded paths, so non-ASCII patterns work as typed: `/blog/café/*` matches a request for `/blog/caf%C3%A9/x`. A path with a malformed percent-escape is matched as-is.
 - `/blog/*` matches `/blog/x` and `/blog/a/b`, but not `/blog`. List `/blog` separately to include it.
 - If any exclude pattern matches, the snippet is not output, even if an include pattern also matches.
 - Nothing is ever output on `/_emdash/` admin paths.
@@ -153,6 +154,7 @@ Transforms are synchronous and run in order.
 - Return **`null`** to drop the snippet.
 - Return **`{ html, fragments }`** to replace the HTML (or drop it with `null`) and also contribute extra page fragments. Extra fragments are de-duplicated by `key`; the first wins.
 - If a transform throws, the error is logged and that snippet is skipped. Other snippets are unaffected.
+- Extra fragments are kept once returned: if an earlier transform returns fragments and a later transform drops the snippet (returns `null`) or throws, the snippet's own HTML is not output but those fragments still are.
 
 The types `Transform`, `TransformContext`, `TransformResult`, `Snippet` and `HeaderFooterCodeRuntimeOptions` are exported from `emdash-header-footer-code/plugin` (the first four also from the package root).
 
@@ -160,15 +162,25 @@ Descriptor options are JSON-serialised, so functions cannot be passed to `header
 
 ```ts
 // your-package/plugin.ts
-import { createPlugin as base, type HeaderFooterCodeRuntimeOptions } from "emdash-header-footer-code/plugin";
+import {
+  createPlugin as base,
+  type HeaderFooterCodeRuntimeOptions,
+  type Transform,
+} from "emdash-header-footer-code/plugin";
+
+/** Tag each <script> with the snippet's consent category so a consent manager can gate it. */
+const tagConsentCategory: Transform = ({ snippet, html }) => {
+  const category = snippet.meta.consentCategory;
+  if (typeof category !== "string" || !/^[a-z-]+$/.test(category)) return html;
+  return html.replace(/<script\b/gi, `<script data-category="${category}"`);
+};
 
 export function createPlugin(options: HeaderFooterCodeRuntimeOptions = {}) {
-  return base({
-    ...options,
-    transforms: [({ html }) => html.replaceAll("HFC_TRANSFORM_ME", "HFC_TRANSFORMED")],
-  });
+  return base({ ...options, transforms: [...(options.transforms ?? []), tagConsentCategory] });
 }
 ```
+
+A snippet saved with `meta: { consentCategory: "analytics" }` and code `<script src="https://example.com/a.js"></script>` is then output as `<script data-category="analytics" src="https://example.com/a.js"></script>`.
 
 Then point the descriptor at it with a package specifier (not a relative path):
 
@@ -195,7 +207,10 @@ pnpm test        # unit tests
 pnpm typecheck
 pnpm exec playwright install chromium   # once
 pnpm e2e         # builds, then runs Playwright against an EmDash 1.0.1 starter in e2e/fixture
+pnpm smoke       # packs the tarball, installs it into a copy of the fixture, astro build + production server
 ```
+
+The code is type-checked with TypeScript in strict mode (`pnpm typecheck`, run in CI) but is not yet linted.
 
 ## Licence
 
