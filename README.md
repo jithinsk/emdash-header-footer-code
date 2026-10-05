@@ -4,6 +4,17 @@ Add custom code snippets (analytics, verification tags, chat widgets, CSS/JS) to
 
 ![native plugin — runs as first-party code](https://img.shields.io/badge/native%20plugin-runs%20as%20first--party%20code-orange)
 
+![Snippet list: placement, priority, enabled toggle and where each snippet runs](https://raw.githubusercontent.com/jithinsk/emdash-header-footer-code/main/docs/screenshots/list.webp)
+
+<details>
+<summary>More screenshots: edit view and change log</summary>
+
+![Edit view: code editor with line numbers, settings, and path, page-kind and locale targeting](https://raw.githubusercontent.com/jithinsk/emdash-header-footer-code/main/docs/screenshots/edit.webp)
+
+![Change log: who created, edited, enabled, disabled or deleted each snippet](https://raw.githubusercontent.com/jithinsk/emdash-header-footer-code/main/docs/screenshots/changelog.webp)
+
+</details>
+
 ## Security notice
 
 This plugin runs as first-party code with no permission sandbox. Snippet code is intentionally unsanitised HTML and is output exactly as written. Only users with the `plugins:manage` permission (Admins) can create, edit, enable or delete snippets. Never paste code you don't trust.
