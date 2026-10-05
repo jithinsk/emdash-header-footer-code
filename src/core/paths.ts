@@ -19,14 +19,30 @@ export function normalizePath(path: string): string {
 	return stripped === "" ? "/" : stripped;
 }
 
-/** Compile a validated pattern into a matcher. Throws on invalid patterns. */
+/**
+ * Decode a percent-encoded path (page paths come from url.pathname, so `café` arrives as
+ * `caf%C3%A9`). Malformed escapes fall back to the raw path instead of throwing.
+ */
+export function safeDecodePath(path: string): string {
+	try {
+		return decodeURI(path);
+	} catch {
+		return path;
+	}
+}
+
+/**
+ * Compile a validated pattern into a matcher. Throws on invalid patterns.
+ * Matching runs on decoded paths: both the page path and the pattern are decoded, so an
+ * admin can type `/blog/café/*` (or the encoded form) and it matches `/blog/caf%C3%A9/x`.
+ */
 export function compilePattern(pattern: string): PathMatcher {
 	const error = validatePattern(pattern);
 	if (error) throw new Error(error);
 	if (pattern.endsWith("*")) {
-		const prefix = pattern.slice(0, -1);
-		return (path) => normalizePath(path).startsWith(prefix);
+		const prefix = safeDecodePath(pattern.slice(0, -1));
+		return (path) => normalizePath(safeDecodePath(path)).startsWith(prefix);
 	}
-	const exact = normalizePath(pattern);
-	return (path) => normalizePath(path) === exact;
+	const exact = normalizePath(safeDecodePath(pattern));
+	return (path) => normalizePath(safeDecodePath(path)) === exact;
 }
