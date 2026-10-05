@@ -8,6 +8,7 @@ export default defineConfig({
 	workers: 1,
 	fullyParallel: false,
 	timeout: 60_000,
+	outputDir: "./test-results",
 	use: { baseURL: BASE_URL, trace: "retain-on-failure" },
 	globalSetup: "./global-setup.ts",
 	webServer: {
