@@ -18,6 +18,8 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm e2e
         env: { CI: "true" }
+      # Installs the packed tarball into a copy of the fixture, then astro build + production server.
+      - run: pnpm smoke
       - uses: actions/upload-artifact@v4
         if: failure()
         with: { name: playwright-test-results, path: "e2e/test-results" }
