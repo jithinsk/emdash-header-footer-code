@@ -259,7 +259,7 @@ Base path: `/_emdash/api/plugins/header-footer-code/`.
 
 If `snippets.list` cannot cleanly detect `plugins:manage` from `ctx.user.role`, split it into `snippets.list` (manage, with code) and `snippets.summary` (read, without code).
 
-Write flow: validate, write the record, append to the change log, bump rev, return the updated record. `ctx.user` supplies `createdBy`, `updatedBy` and the change-log user.
+Write flow: validate, write the record, bump rev (and invalidate the local cache), append to the change log, return the updated record. A failed change-log write is logged and does not fail the request, so public output never stays stale after a successful write. `ctx.user` supplies `createdBy`, `updatedBy` and the change-log user.
 
 **Validation** (`core/validate.ts`, shared with the admin form for instant feedback; the server is the authority):
 - `name` is required and at most 200 characters.
