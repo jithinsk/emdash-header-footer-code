@@ -9,7 +9,8 @@ export const ADMIN_PAGE = "/_emdash/admin/plugins/header-footer-code/snippets";
 /** Log in as the dev user (dev mode only). The user's role comes from the users table. */
 export async function login(page: Page) {
 	await page.goto(`/_emdash/api/auth/dev-bypass?redirect=${encodeURIComponent(ADMIN_PAGE)}`);
-	await expect(page.getByTestId("hfc-theme-note")).toBeVisible();
+	// Generous timeout: the admin SPA can still be booting ("Loading EmDash...") after a reload.
+	await expect(page.getByTestId("hfc-theme-note")).toBeVisible({ timeout: 30_000 });
 }
 
 /** Set the dev user's role directly (40 = Editor, 50 = Admin). */

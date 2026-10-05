@@ -1,3 +1,4 @@
+import { chromium } from "@playwright/test";
 import { BASE_URL } from "./playwright.config.js";
 
 export default async function globalSetup() {
@@ -22,5 +23,19 @@ export default async function globalSetup() {
 	for (let i = 0; i < 3; i++) {
 		if ((await fetch(`${BASE_URL}/`)).ok) break;
 		await new Promise((r) => setTimeout(r, 1000));
+	}
+
+	// Warm the admin SPA in a real browser. On a cold runner Vite compiles the admin bundle
+	// (and may reload once after optimising deps) on first load, which can take far longer
+	// than a single test's expect timeout.
+	const browser = await chromium.launch();
+	try {
+		const page = await browser.newPage({ baseURL: BASE_URL });
+		await page.goto(
+			`/_emdash/api/auth/dev-bypass?redirect=${encodeURIComponent("/_emdash/admin/plugins/header-footer-code/snippets")}`,
+		);
+		await page.getByTestId("hfc-theme-note").waitFor({ state: "visible", timeout: 150_000 });
+	} finally {
+		await browser.close();
 	}
 }
