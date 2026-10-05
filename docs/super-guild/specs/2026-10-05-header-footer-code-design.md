@@ -323,7 +323,7 @@ One page under Plugins: **"Header & Footer Code"** (`admin.pages: [{ path: "/", 
   - Log in as an Editor and confirm there are no create or edit controls and no code.
   - Confirm the test transform's rewrite appears in the output.
 
-**CI:** GitHub Actions runs typecheck, lint, Vitest and Playwright on every PR. A tagged release runs `npm publish --provenance`.
+**CI:** GitHub Actions runs typecheck, lint, Vitest and Playwright on every PR. A tagged release publishes to npm via trusted publishing (OIDC, no token), which adds provenance automatically.
 
 ## 11. Release and docs
 

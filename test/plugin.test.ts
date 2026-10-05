@@ -1,12 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { headerFooterCode } from "../src/index.js";
 import { createPlugin } from "../src/plugin.js";
+import { PLUGIN_VERSION } from "../src/version.js";
+import pkg from "../package.json" with { type: "json" };
+
+describe("version", () => {
+	it("package.json and src/version.ts agree (bump both on release)", () => {
+		expect(PLUGIN_VERSION).toBe(pkg.version);
+	});
+});
 
 describe("descriptor", () => {
 	it("returns a native descriptor with matching id and version", () => {
 		expect(headerFooterCode()).toEqual({
 			id: "header-footer-code",
-			version: "0.1.0",
+			version: PLUGIN_VERSION,
 			format: "native",
 			entrypoint: "emdash-header-footer-code/plugin",
 			options: {},
@@ -33,7 +41,7 @@ describe("createPlugin", () => {
 	});
 	it("matches descriptor id/version", () => {
 		expect(plugin.id).toBe("header-footer-code");
-		expect(plugin.version).toBe("0.1.0");
+		expect(plugin.version).toBe(PLUGIN_VERSION);
 	});
 	it("registers the page:fragments hook", () => {
 		expect(typeof plugin.hooks["page:fragments"]?.handler).toBe("function");
