@@ -6,3 +6,5 @@ e2e/fixture/.astro
 test-results
 playwright-report
 *.tgz
+.DS_Store
+/package/
