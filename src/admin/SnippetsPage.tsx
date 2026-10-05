@@ -215,21 +215,29 @@ function SnippetsScreen() {
 			{canManage ? (
 				<div className="space-y-4">
 					<Tabs
-						className="w-full max-w-full sm:w-fit"
+						className="hfc-tabs w-full max-w-full sm:w-fit"
 						listClassName="w-full"
+						indicatorClassName="hfc-tab-indicator"
 						value={tab}
 						onValueChange={(v) => setTab(v === "changelog" ? "changelog" : "snippets")}
 						tabs={[
 							{
 								value: "snippets",
+								className: "hfc-tab",
 								label: (
 									<span data-testid="hfc-tab-snippets" className="flex items-center gap-1.5">
 										Snippets
-										<Badge variant="secondary">{data?.snippets.length ?? 0}</Badge>
+										<Badge variant="secondary" className="hfc-tab-count">
+											{data?.snippets.length ?? 0}
+										</Badge>
 									</span>
 								),
 							},
-							{ value: "changelog", label: <span data-testid="hfc-tab-changelog">Change log</span> },
+							{
+								value: "changelog",
+								className: "hfc-tab",
+								label: <span data-testid="hfc-tab-changelog">Change log</span>,
+							},
 						]}
 					/>
 					<LayerCard>

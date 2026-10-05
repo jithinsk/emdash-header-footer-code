@@ -336,10 +336,11 @@ export function SnippetForm({
 	}
 
 	const mainFields = FIELDS.filter((f) => f.section === "main");
-	const sideSections = (["settings", "targeting"] as const).map((s) => ({
-		section: s,
-		fields: FIELDS.filter((f) => f.section === s),
-	}));
+	// Switches read best at the end of a card, so toggles go last (otherwise FIELDS order).
+	const settingsFields = FIELDS.filter((f) => f.section === "settings").sort(
+		(x, y) => Number(x.type === "toggle") - Number(y.type === "toggle"),
+	);
+	const targetingFields = FIELDS.filter((f) => f.section === "targeting");
 
 	return (
 		<div className="space-y-6">
@@ -373,8 +374,13 @@ export function SnippetForm({
 				/>
 			)}
 
+			{/*
+			  Wide: Code and Targeting stacked in the main column, Settings alone on the right and
+			  sticky. Narrow: Code -> Settings -> Targeting. Placement is done with grid areas in
+			  styles.tsx so the DOM (and tab) order is the narrow order.
+			*/}
 			<div className="hfc-edit-grid">
-				<LayerCard>
+				<LayerCard className="hfc-area-code">
 					<CardHeader
 						title="Code"
 						description="Tab indents, Shift+Tab outdents. Press Esc then Tab to move on."
@@ -394,16 +400,19 @@ export function SnippetForm({
 					<div className="space-y-4 p-5">{mainFields.map(renderField)}</div>
 				</LayerCard>
 
-				<div className="hfc-side">
-					{sideSections.map(({ section, fields }) =>
-						fields.length === 0 ? null : (
-							<LayerCard key={section}>
-								<CardHeader title={SECTION_TITLE[section].title} description={SECTION_TITLE[section].description} />
-								<div className="space-y-5 p-5">{fields.map(renderField)}</div>
-							</LayerCard>
-						),
-					)}
-				</div>
+				{settingsFields.length > 0 && (
+					<LayerCard className="hfc-area-settings">
+						<CardHeader title={SECTION_TITLE.settings.title} description={SECTION_TITLE.settings.description} />
+						<div className="space-y-5 p-5">{settingsFields.map(renderField)}</div>
+					</LayerCard>
+				)}
+
+				{targetingFields.length > 0 && (
+					<LayerCard className="hfc-area-targeting hfc-targeting">
+						<CardHeader title={SECTION_TITLE.targeting.title} description={SECTION_TITLE.targeting.description} />
+						<div className="hfc-targeting-grid p-5">{targetingFields.map(renderField)}</div>
+					</LayerCard>
+				)}
 			</div>
 
 			<div className="hfc-footer flex flex-wrap items-center justify-between gap-3">
