@@ -212,6 +212,10 @@ plugins: [headerFooterCode({ entrypoint: "your-package/plugin" })]
 
 This package follows semver. Adding a capability is a major version, because native plugins have no consent prompt on upgrade.
 
+Release notes are in [CHANGELOG.md](CHANGELOG.md) and on [GitHub Releases](https://github.com/jithinsk/emdash-header-footer-code/releases).
+
+To release: add a `## x.y.z (YYYY-MM-DD)` section to `CHANGELOG.md`, bump the version in `package.json` and `src/version.ts`, then push a `vx.y.z` tag. The release workflow publishes to npm with provenance and creates the GitHub Release from that changelog section. It stops before publishing if the section is missing.
+
 ## Development
 
 ```sh
