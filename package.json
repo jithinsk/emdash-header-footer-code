@@ -1,6 +1,6 @@
 {
   "name": "emdash-header-footer-code",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Add custom code snippets (analytics, verification tags, chat widgets, CSS/JS) to the head or body of EmDash pages — no theme edits.",
   "repository": { "type": "git", "url": "git+https://github.com/jithinsk/emdash-header-footer-code.git" },
   "homepage": "https://emdash-code.jithins.dev",
