@@ -4,6 +4,7 @@
   "description": "Add custom code snippets (analytics, verification tags, chat widgets, CSS/JS) to the head or body of EmDash pages — no theme edits.",
   "repository": { "type": "git", "url": "git+https://github.com/jithinsk/emdash-header-footer-code.git" },
   "homepage": "https://emdash-code.jithins.dev",
+  "author": "Jithin Sebastian (https://www.jithins.dev)",
   "bugs": { "url": "https://github.com/jithinsk/emdash-header-footer-code/issues" },
   "type": "module",
   "license": "MIT",
