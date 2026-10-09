@@ -4,6 +4,8 @@ Add custom code snippets (analytics, verification tags, chat widgets, CSS/JS) to
 
 ![native plugin — runs as first-party code](https://img.shields.io/badge/native%20plugin-runs%20as%20first--party%20code-orange)
 
+**Documentation: [emdash-code.jithins.dev](https://emdash-code.jithins.dev)**, with guides, recipes, troubleshooting and the full reference.
+
 ![Snippet list: placement, priority, enabled toggle and where each snippet runs](https://raw.githubusercontent.com/jithinsk/emdash-header-footer-code/main/docs/screenshots/list.webp)
 
 <details>
