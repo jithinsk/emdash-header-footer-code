@@ -3,7 +3,7 @@ on:
   push:
     tags: ["v*"]
 permissions:
-  contents: read
+  contents: write # create the GitHub Release
   id-token: write
 jobs:
   publish:
@@ -17,5 +17,14 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck && pnpm test && pnpm build
       - run: test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
+      # Release notes come from this version's CHANGELOG.md section; fail before publishing if it's missing.
+      - name: Extract release notes
+        run: |
+          awk -v v="${GITHUB_REF_NAME#v}" 'index($0, "## " v " ") == 1 { f = 1; next } /^## / { f = 0 } f' CHANGELOG.md > "$RUNNER_TEMP/release-notes.md"
+          test -s "$RUNNER_TEMP/release-notes.md" || { echo "No CHANGELOG.md section for ${GITHUB_REF_NAME#v}"; exit 1; }
       # Trusted publishing (OIDC): no token; provenance is added automatically.
       - run: npm publish --access public
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/release-notes.md" --verify-tag
